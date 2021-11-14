@@ -39,12 +39,11 @@ void freenode (struct Node *t)
     if (t != NULL)
     {
         freenode (t -> next);
-        t->next = NULL;
         free (t -> word); 
         free (t);
     }
 }
-
+  
 
 int main(int argc, char **argv)
 {
@@ -69,19 +68,17 @@ int main(int argc, char **argv)
     char *ctrl =  ";<()&|";
     char *ctrl2 = "&|>";
 
-    struct Node *t= NULL;
-    int n = 0;
-    int step = 3; 
-    char *w = (char*)malloc(sizeof(char)*step);
-
     int q = 0;  // 0 не внутри кавычек, 1 - внутри кавычек
     int kq=0;
+    int step = 3; 
 
-   
 
     while(c!=EOF)
     {
-        while (((c=getc(fp1)) != '\n') && (c != EOF))          
+        struct Node *t= NULL;
+        int n = 0;
+        char *w = (char*)malloc(sizeof(char)*step); 
+        while (((c=getc(fp1)) != '\n')&&(c!=EOF))          
         {
             if (c == '"')
             {
@@ -156,19 +153,18 @@ int main(int argc, char **argv)
         n=0;    
         free(w);
         w = (char*)malloc(sizeof(char)*step);
-    }
 
-    if((kq%2)==1) 
-        fprintf(stderr,"Error:odd number of quotes\n");
 
-    if(w!=NULL) 
+        finprint(t);
+        freenode(t);
+
+         if(w!=NULL) 
         free(w); 
-    
-    finprint(t);
-    freenode(t);
+
+            if((kq%2)==1) 
+        fprintf(stderr,"Error:odd number of quotes\n");
+    }    
 
 fclose(fp1);
 return 0;
 }
-
-
