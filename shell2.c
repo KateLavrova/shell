@@ -2,17 +2,23 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
-
 #include <unistd.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <limits.h>
-
+#include <signal.h> 
+#include <fcntl.h> 
+#include <sys/types.h>
 
 struct Node
 {
     char *word;
     struct Node *next;
+
+    char *in;
+    char *out;
+    char *add;
+    char *word1;
 };
 
 struct Node *addelem(struct Node *t, char *w)
@@ -59,37 +65,6 @@ void freenode(struct Node *t)
     }
 }
 
-static int get_path(char const *path, char **out_path, char const *bin_path)
-{
-    char *bin_path_tmp = strdup(bin_path);
-    char *next_path = strtok(bin_path_tmp, ":");
-    while (next_path)
-    {
-        int next_path_len = strlen(next_path);
-        int path_len = strlen(path); 
-
-        char full_path[next_path_len + path_len + 2];
-        strcpy(full_path, next_path);
-        full_path[next_path_len] = '/';
-        strcpy(full_path + next_path_len + 1, path);
-        full_path[next_path_len + path_len + 1] = '\0';
-         
-      FILE *fp;
-      if((fp=fopen(full_path,"r"))!=NULL)
-        {
-                fclose(fp);
-                *out_path = strdup(full_path);
-                free(bin_path_tmp);
-                return 1;
-        }
-
-        next_path = strtok(NULL, ":");
-    }
-
-    free(bin_path_tmp);
-    return 0;
-}
-
 
 int main(int argc, char **argv)
 {
@@ -115,8 +90,8 @@ int main(int argc, char **argv)
     int q = 0; // 0 не внутри кавычек, 1 - внутри кавычек
     int kq = 0;
     int step = 3;
-
-    while (c != EOF)
+    int exit = 1;
+    while ((c != EOF)&&(exit==1))
     {
 
         char dir[PATH_MAX];
@@ -196,12 +171,7 @@ int main(int argc, char **argv)
         free(w);
         w = (char *)malloc(sizeof(char) * step);
 
-        // finprint(t);
 
-        if (strcmp("exit", t->word)==0)
-        {
-            return 0;
-        }
         if (strcmp("cd", t->word) == 0)
         {
             if(t->next)
@@ -211,45 +181,34 @@ int main(int argc, char **argv)
         }
         else
         {
-            char *result_path = NULL;
-            int success = get_path(t->word, &result_path, getenv("PATH"));
-
-            if (success)
+            int pid;
+            if ((pid = fork()) < 0)
             {
-                int pid;
-                if ((pid = fork()) < 0)
+                perror("cannot fork");
+                return 1;
+            }
+            else if (!pid)
+            {
+                 /* child */
+                struct Node *tt = t;
+                char *argv[list_size(tt) + 1];
+                int i;
+                for (i = 0; tt != NULL; ++i)
                 {
-                    perror("cannot fork");
-                    return 1;
+                    argv[i] = tt->word;
+                    tt = tt->next;
                 }
-                else if (!pid)
-                {
-                    /* child */
-                    char *argv[list_size(t) + 1];
-                    int i;
-                    for (i = 0; t != NULL; ++i)
-                    {
-                        argv[i] = t->word;
-                        t = t->next;
-                    }
-                    argv[i] = NULL;
+                argv[i] = NULL;
 
-                    execv(result_path, argv);
-                    perror("exec");
-                    return 1;
-                }
-                else
-                {
-                    /* parent */
-                    int status;
-                    while (wait(&status) > 0) continue;
-                }
+                execvp(*argv, argv);
+                perror("exec");
             }
             else
             {
-                fprintf(stderr, "%s\n", "Program not found");
+                /* parent */
+                int status;
+                while (wait(&status) > 0) continue;
             }
-            
         }
         
         freenode(t);
