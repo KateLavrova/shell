@@ -14,11 +14,6 @@ struct Node
 {
     char *word;
     struct Node *next;
-
-    char *in;
-    char *out;
-    char *add;
-    char *word1;
 };
 
 struct Node *addelem(struct Node *t, char *w)
@@ -67,8 +62,7 @@ void freenode(struct Node *t)
 
 int main(int argc, char **argv)
 {
-    FILE *fp1;
-    fp1 = stdin;
+    FILE *fp1 = stdin;
 
     for (int i = 1; i < argc; i++)
     {
@@ -89,10 +83,8 @@ int main(int argc, char **argv)
     int q = 0; // 0 не внутри кавычек, 1 - внутри кавычек
     int kq = 0;
     int step = 3;
-    int exit = 1;
-    while ((c != EOF)&&(exit==1))
+    while ((c != EOF))
     {
-        
         char dir[PATH_MAX];
         getcwd(dir, sizeof(dir)); //копирует путь каталога, на который указывает dir
         printf("%s> ", dir);
@@ -179,136 +171,102 @@ int main(int argc, char **argv)
         }
         else
         {
-            int fp;
- 
+            int pid = fork();
             struct Node *tt = t;
-            char *argv[list_size(tt) + 1];
-            char *redirect=NULL;
-            int direction=0;
-            int pipeFound=0;
-            char* pipeCommand;
-            char* pipeArg;
-            int i;
-            for (i = 0; tt != NULL; ++i)
+            if (pid  < 0)
             {
-                if(strcmp(tt->word,">")==0)
-                {
-                    redirect=tt->next->word;
-                    direction=1;
-                    break;
-                }
-
-                if(strcmp(tt->word,">>")==0)
-                {
-                    redirect=tt->next->word;
-                    direction=2;
-                    break;
-                }
-
-                if(strcmp(tt->word,"<")==0)
-                {
-                    redirect=tt->next->word;
-                    direction=3;
-                    break;
-                }
-
-                if(strcmp(tt->word,"|")==0)
-                {
-                    pipeCommand=tt->next->word;
-                    pipeArg=tt->next->next->word;
-                    pipeFound=1;
-                    break;
-                }
-
-                argv[i] = tt->word;
-                tt = tt->next;
+                perror("cannot fork");
+                return 1;
             }
-            argv[i] = NULL;
-
-            if(redirect)
+            while (!pid)
             {
-                printf("Redirect command\n");
-                if(direction == 1)
-                {
-                    fp = open (redirect, O_CREAT | O_WRONLY | O_TRUNC);
-                    if (fp==-1) 
-                        perror(redirect);
-                }
-                if(direction == 2)
-                {
-                    fp = open (redirect,O_APPEND | O_WRONLY);
-                    if (fp == -1)
-                        perror(redirect);
-                }
-                if(direction==3)
-                {
-                    fp=open(redirect,O_RDONLY);
-                    if(fp==-1)
-                        perror(redirect);
-                }
-                int pid1 = fork();
-                if(!pid1)
-                {
-                    if (direction == 3)
-                    {
-                        dup2(fp,STDIN_FILENO);
-                        close(fp);
-                    }
-                    if((direction == 1) || (direction == 2))
-                    {
-                        dup2(fp,STDOUT_FILENO);
-                        close(fp);
-                    }
-                     
-                    execvp(*argv, argv);
-                }
-                close(fp);
-                waitpid(pid1, NULL, 0);
-            } 
-            else if(pipeFound)
-            {
-                printf("Pipe command\n");
-                int pipes[2];
-                pipe(pipes);
-
-                int pid1=fork();
-                if(!pid1)
-                {
-                    dup2(pipes[1],STDOUT_FILENO);
-                    close(pipes[0]);
-                    close(pipes[1]);
-                    execvp(*argv, argv);
-                }
-
-                int pid2=fork();
-                if(!pid2)
-                {
-                    dup2(pipes[0], STDIN_FILENO);
-                    close(pipes[0]);
-                    close(pipes[1]);
-                    execlp(pipeCommand, pipeCommand, pipeArg, NULL);
-                }
-                close(pipes[0]);
-                close(pipes[1]);
-                waitpid(pid1, NULL, 0);
-                waitpid(pid2,NULL,0);
+                char *argv[list_size(tt) + 1];
+                int pipeFound = 0;
+                int i = 0;
                 
-            } 
-            else 
-            {
-                printf("Regular command\n");
-                int pid1 = fork();
-                if(!pid1)
+                while (tt != NULL)
+                {
+                    int direction = 0;
+
+                    if (strcmp(tt->word,  ">") == 0)
+                        direction = 1;
+                    if (strcmp(tt->word,  ">>") == 0)
+                        direction = 2;
+                    if (strcmp(tt->word,  "<") == 0)
+                        direction = 3;
+                    
+                    if(direction > 0)
+                    {
+                        int fp = 0;
+                        if (direction == 1)
+                        {
+                            fp=open(tt->next->word, O_CREAT | O_WRONLY | O_TRUNC);
+                            dup2(fp,STDOUT_FILENO);
+                        }
+                        if (direction == 2)
+                        {
+                            fp=open(tt->next->word, O_APPEND | O_WRONLY);
+                            dup2(fp,STDOUT_FILENO);
+                        }
+                        if (direction == 3)
+                        {
+                            fp=open(tt->next->word,O_RDONLY);
+                            dup2(fp,STDIN_FILENO);   
+                        }
+                        if (fp==-1) 
+                            perror(tt->next->word);
+
+                        close(fp);
+                        tt = tt->next->next;
+                        continue;
+                    }
+
+                    if(strcmp(tt->word, "|") == 0)
+                    {
+                        pipeFound = 1;
+                        tt = tt->next;
+                        break;
+                    }
+                    
+                    argv[i] = tt->word;
+                    i++;
+                    tt = tt->next;
+                }
+                argv[i] = NULL;
+
+                if (*argv)
+                {
+                    if (pipeFound)
+                    {
+                        int fd[2];
+                        pipe(fd);
+
+                        pid = fork();
+                        if (!pid)
+                        {
+                            dup2(fd[0], STDIN_FILENO);
+                            close(fd[0]);
+                            close(fd[1]);
+                            continue;
+                        }
+                        dup2(fd[1], STDOUT_FILENO);
+                        close(fd[0]);
+                        close(fd[1]);
+                    }
                     execvp(*argv, argv);
-                waitpid(pid1, NULL, 0);
+                }
+                else
+                {
+                    freenode(t);
+                    if (w != NULL) free(w);
+                    exit(0);
+                }
             }
-
-
-
+            int status;
+            while (wait(&status) > 0) continue;
         }
         
         freenode(t);
-
         if (w != NULL) free(w);
 
         if ((kq % 2) == 1)
