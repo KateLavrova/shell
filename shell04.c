@@ -232,9 +232,6 @@ int main(int argc, char **argv)
                 }
             }
         }
-
-        // Entier command line parsed
-
         w[n] = 0;
         t = addelem(t, w);
         n = 0;
@@ -263,8 +260,6 @@ int main(int argc, char **argv)
             { // Parent
                 for(struct Node* run = t; run; run = run->next)
                 {
-                   /* if(strlen(run->word))
-                        background = !strcmp(run->word, "&");*/
                     if ((strlen(run->word)>0) && (strcmp(run->word,"&")==0) && (strlen(run->next->word)==0))
                         background = 1;
                     if((strcmp(run->word,"&")==0) && (strlen(run->next->word)>0))
@@ -298,17 +293,17 @@ int main(int argc, char **argv)
                         if (direction == 1)
                         {
                             fp=open(tt->next->word, O_CREAT | O_WRONLY | O_TRUNC);
-                            dup2(fp,STDOUT_FILENO);
+                            dup2(fp,1);
                         }
                         if (direction == 2)
                         {
                             fp=open(tt->next->word, O_APPEND | O_WRONLY);
-                            dup2(fp,STDOUT_FILENO);
+                            dup2(fp,1);
                         }
                         if (direction == 3)
                         {
                             fp=open(tt->next->word,O_RDONLY);
-                            dup2(fp,STDIN_FILENO);   
+                            dup2(fp,0);   
                         }
                         if (fp==-1) 
                             perror(tt->next->word);
@@ -348,12 +343,12 @@ int main(int argc, char **argv)
                         pid = fork();
                         if (!pid) // Child
                         {
-                            dup2(fd[0], STDIN_FILENO);
+                            dup2(fd[0], 0);
                             close(fd[0]);
                             close(fd[1]);
                             continue;
                         }
-                        dup2(fd[1], STDOUT_FILENO);
+                        dup2(fd[1], 1);
                         close(fd[0]);
                         close(fd[1]);
                     }
