@@ -367,7 +367,7 @@ int main(int argc, char **argv)
 
             int status = 0;
             //while (wait(&status) > 0) continue;
-            if(background) 
+            if(background)
             {
                 printf("[%d] Run \"%s\" in background\n", pid, t->word);
                 int result = waitpid(pid, &status, WNOHANG);
@@ -378,8 +378,7 @@ int main(int argc, char **argv)
             } 
             else
             {
-                int wait = waitpid(pid, &status, 0);
-                proc_print_status(wait, pid, status); // wait = pid
+                waitpid(pid, &status, 0);
             }
         }
         
