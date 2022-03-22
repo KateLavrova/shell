@@ -1,4 +1,6 @@
 #include <iostream>
+#include <cmath>
+#include <string>
 #include <cstring>
 using namespace std;
 
@@ -50,7 +52,7 @@ class Rectangle
 			Rectangle r3(a,c,b,d);
 			r3.PrintRect(r3);
 		}
-
+		
 		void CrossRect(Rectangle r1, Rectangle r2)
 		{
 			int a1 = min(r1.x1,r2.x1);
@@ -65,9 +67,10 @@ class Rectangle
 			int d1 = max(r1.y1,r2.y1);
 			int d2 = max(r1.y2,r2.y2);
 			int d = max(d1,d2);
+
 			int k[4] = {r1.x1,r1.x2,r2.x1,r2.x2};
 			int l[4] = {r1.y1,r1.y2,r2.y1,r2.y2};
-			int a3,a4,b3,b4;
+			int a3=0,a4=0,b3=0,b4=0;
 			for(int i=0; i<4; i++)
 			{	
 				if((k[i]!=b)&&(k[i]!=a))
@@ -75,16 +78,20 @@ class Rectangle
 				if((l[i]!=d)&&(l[i]!=c))
 				b3 = l[i];
 			}
-			for (int i =0;i<4;i++)
+			for (int i=0;i<4;i++)
 			{
 				if((k[i]!=b) && (k[i]!=a) && (k[i]!=a3))
-				a4 = k[i];
+					a4 = k[i];
 				if((l[i]!=d) && (l[i]!=c) && (l[i]!=b3))
-				b4 = l[i];
+					b4 = l[i];
 			}
-			Rectangle r3(a3,b3,a4,b4);
+			Rectangle r3(a4,b4,a3,b3);
 			r3.PrintRect(r3);
 		}
+
+		 
+
+
 };
 
 void menu()
